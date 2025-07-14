@@ -1,0 +1,71 @@
+' === HFSS Initialization ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "AwkwardMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS Ready."
+
+' === Define z coordinate (can be parametric) ===
+Dim z_val: z_val = "12.25mm"
+
+' === Define points (X, Y) ===
+Dim vx(16), vy(16)
+vx(0) = "-321.2681912mm": vy(0) = "-117.5374996mm"
+vx(1) = "-321.2681912mm": vy(1) = "-124.5374996mm"
+vx(2) = "-269.3222142mm": vy(2) = "-124.5374996mm"
+vx(3) = "-250.7346861mm": vy(3) = "-109.9499715mm"
+vx(4) = "-250.7346861mm": vy(4) = "0.318002405mm"
+vx(5) = "-238.7524027mm": vy(5) = "8.192018153mm"
+vx(6) = "-238.7524027mm": vy(6) = "10.84952449mm"
+vx(7) = "-193.6343184mm": vy(7) = "10.84952449mm"
+vx(8) = "-193.6343184mm": vy(8) = "-98.11330402mm"
+vx(9) = "-189.6973106mm": vy(9) = "-98.11330402mm"
+vx(10)= "-189.6973106mm": vy(10)= "41.81409142mm"
+vx(11)= "-244.945316mm":  vy(11)= "41.81409142mm"
+vx(12)= "-269.7169696mm": vy(12)= "17.04243788mm"
+vx(13)= "-269.7169696mm": vy(13)= "8.192018153mm"
+vx(14)= "-257.7346861mm": vy(14)= "0.318002406mm"
+vx(15)= "-257.7346861mm": vy(15)= "-103.0504766mm"
+vx(16)= "-272.2217091mm": vy(16)= "-117.5374996mm"
+' Polyline will close automatically to vertex(0)
+
+' === Create polyline points ===
+Dim polyPoints()
+ReDim polyPoints(16)
+Dim i
+For i = 0 To 16
+  polyPoints(i) = Array("NAME:PLPoint", "X:=", vx(i), "Y:=", vy(i), "Z:=", z_val)
+Next
+
+' === Create segments (no need to close manually with IsPolylineClosed=True) ===
+Dim segments()
+ReDim segments(15)
+For i = 0 To 15
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+' === Create the polyline ===
+On Error Resume Next
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", True, _
+  Array("NAME:PolylinePoints", polyPoints), _
+  Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", _
+  "Name:=", "AwkwardLine", _
+  "Flags:=", "", "Color:=", "(132 132 193)", _
+  "Transparency:=", 0, "PartCoordinateSystem:=", "Global", _
+  "MaterialName:=", "copper", "SolveInside:=", False)
+
+If Err.Number <> 0 Then
+  MsgBox "❌ Error during CreatePolyline: " & Err.Description
+  WScript.Quit
+Else
+  MsgBox "✅ Polyline created successfully!"
+End If
+On Error GoTo 0
