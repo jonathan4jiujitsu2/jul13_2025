@@ -1,0 +1,98 @@
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "HybridMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+Dim z_val: z_val = "12.25mm"
+
+' -------------------------------
+' Rect 1: Left vertical segment
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-321.27mm", _
+  "YStart:=", "-124.54mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "2mm", _
+  "Height:=", "7mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect1", "MaterialName:=", "copper")
+
+' -------------------------------
+' Rect 2: Bottom horizontal
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-321.27mm", _
+  "YStart:=", "-124.54mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "52mm", _
+  "Height:=", "2mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect2", "MaterialName:=", "copper")
+
+' -------------------------------
+' Rect 3: Right vertical leg
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-257.73mm", _
+  "YStart:=", "-103.05mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "2mm", _
+  "Height:=", "114mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect3", "MaterialName:=", "copper")
+
+' -------------------------------
+' Rect 4: Top overhang
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-269.71mm", _
+  "YStart:=", "8.19mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "25mm", _
+  "Height:=", "10mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect4", "MaterialName:=", "copper")
+
+' -------------------------------
+' Rect 5: Inner vertical bar
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-189.69mm", _
+  "YStart:=", "-98.11mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "2mm", _
+  "Height:=", "140mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect5", "MaterialName:=", "copper")
+
+' -------------------------------
+' Polyline: Angled segment (TR3)
+Dim polyPoints
+polyPoints = Array( _
+  Array("NAME:PLPoint", "X:=", "-244.95mm", "Y:=", "41.81mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-269.71mm", "Y:=", "17.04mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-269.71mm", "Y:=", "8.19mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-257.73mm", "Y:=", "0.318mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-257.73mm", "Y:=", "-103.05mm", "Z:=", z_val) _
+)
+
+Dim segments(4)
+Dim i
+For i = 0 To 4
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", False, _
+  Array("NAME:PolylinePoints", polyPoints), _
+  Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", "Name:=", "AngledEdge", "MaterialName:=", "copper", "SolveInside:=", True)
+
+' -------------------------------
+' Unite all parts into one body
+oEditor.Unite Array("Rect1", "Rect2", "Rect3", "Rect4", "Rect5", "AngledEdge")
