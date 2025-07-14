@@ -1,0 +1,105 @@
+' Initialize HFSS
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "HybridMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS Initialized."
+
+' Define parametric variables
+Dim z_val: z_val = "12.25mm"
+
+MsgBox "z_val set."
+
+' -------------------------------
+' Rect 1: Left vertical segment
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-321.27mm", _
+  "YStart:=", "-124.54mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "2mm", _
+  "Height:=", "7mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect1", "MaterialName:=", "copper", "SolveInside:=", False)
+MsgBox "Rect1 created."
+
+' -------------------------------
+' Rect 2: Bottom horizontal
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-321.27mm", _
+  "YStart:=", "-124.54mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "52mm", _
+  "Height:=", "2mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect2", "MaterialName:=", "copper", "SolveInside:=", False)
+MsgBox "Rect2 created."
+
+' -------------------------------
+' Rect 3: Right vertical leg
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "-257.73mm", _
+  "YStart:=", "-103.05mm", _
+  "ZStart:=", z_val, _
+  "Width:=", "2mm", _
+  "Height:=", "114mm", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect3", "MaterialName:=", "copper", "SolveInside:=", False)
+MsgBox "Rect3 created."
+
+' -------------------------------
+' Polyline: Angled segment (TR3)
+Dim polyPoints
+polyPoints = Array( _
+  Array("NAME:PLPoint", "X:=", "-244.95mm", "Y:=", "41.81mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-269.71mm", "Y:=", "17.04mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-269.71mm", "Y:=", "8.19mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-257.73mm", "Y:=", "0.318mm", "Z:=", z_val), _
+  Array("NAME:PLPoint", "X:=", "-257.73mm", "Y:=", "-103.05mm", "Z:=", z_val) _
+)
+
+MsgBox "Polyline points defined: " & UBound(polyPoints) + 1
+
+Dim segments()
+ReDim segments(UBound(polyPoints))
+Dim i
+For i = 0 To UBound(polyPoints) - 1
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+MsgBox "Polyline segments defined."
+
+On Error Resume Next
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", False, _
+  Array("NAME:PolylinePoints", polyPoints), _
+  Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", "Name:=", "AngledEdge", "MaterialName:=", "copper", "SolveInside:=", False)
+
+If Err.Number <> 0 Then
+  MsgBox "⚠️ Error during CreatePolyline: " & Err.Description
+  WScript.Quit
+Else
+  MsgBox "Polyline created successfully."
+End If
+On Error GoTo 0
+
+' -------------------------------
+' Unite all parts
+On Error Resume Next
+oEditor.Unite Array("Rect1", "Rect2", "Rect3", "AngledEdge")
+If Err.Number <> 0 Then
+  MsgBox "⚠️ Error during Unite: " & Err.Description
+Else
+  MsgBox "Geometry united successfully!"
+End If
+
+MsgBox "✅ Reminder: Set 'SolveInside = False' for copper to reduce mesh size in high-conductivity solids."
