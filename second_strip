@@ -1,0 +1,54 @@
+'=== Setup ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "MicrostripParametric", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+'=== Define Parameters ===
+Dim vertexX(17), vertexY(17), vertexZ(17)
+vertexX(0) = "-321.2681912mm": vertexY(0) = "-117.5374996mm": vertexZ(0) = "12.25mm"
+vertexX(1) = "-321.2681912mm": vertexY(1) = "-124.5374996mm": vertexZ(1) = "12.25mm"
+vertexX(2) = "-269.3222142mm": vertexY(2) = "-124.5374996mm": vertexZ(2) = "12.25mm"
+vertexX(3) = "-250.7346861mm": vertexY(3) = "-109.9499715mm": vertexZ(3) = "12.25mm"
+vertexX(4) = "-250.7346861mm": vertexY(4) = "0.318002405mm":  vertexZ(4) = "12.25mm"
+vertexX(5) = "-238.7524027mm": vertexY(5) = "8.192018153mm": vertexZ(5) = "12.25mm"
+vertexX(6) = "-238.7524027mm": vertexY(6) = "10.84952449mm": vertexZ(6) = "12.25mm"
+vertexX(7) = "-193.6343184mm": vertexY(7) = "10.84952449mm": vertexZ(7) = "12.25mm"
+vertexX(8) = "-193.6343184mm": vertexY(8) = "-98.11330402mm": vertexZ(8) = "12.25mm"
+vertexX(9) = "-189.6973106mm": vertexY(9) = "-98.11330402mm": vertexZ(9) = "12.25mm"
+vertexX(10)= "-189.6973106mm": vertexY(10)= "41.81409142mm":  vertexZ(10)= "12.25mm"
+vertexX(11)= "-244.945316mm":  vertexY(11)= "41.81409142mm":  vertexZ(11)= "12.25mm"
+vertexX(12)= "-269.7169696mm": vertexY(12)= "17.04243788mm": vertexZ(12)= "12.25mm"
+vertexX(13)= "-269.7169696mm": vertexY(13)= "8.192018153mm": vertexZ(13)= "12.25mm"
+vertexX(14)= "-257.7346861mm": vertexY(14)= "0.318002406mm":  vertexZ(14)= "12.25mm"
+vertexX(15)= "-257.7346861mm": vertexY(15)= "-103.0504766mm": vertexZ(15)= "12.25mm"
+vertexX(16)= "-272.2217091mm": vertexY(16)= "-117.5374996mm": vertexZ(16)= "12.25mm"
+vertexX(17)= vertexX(0):         vertexY(17)= vertexY(0):         vertexZ(17)= vertexZ(0) 'Close polygon
+
+'=== Create Point Array Dynamically ===
+Dim pointArray(), i
+ReDim pointArray(17)
+For i = 0 To 17
+  pointArray(i) = Array("NAME:PLPoint", "X:=", vertexX(i), "Y:=", vertexY(i), "Z:=", vertexZ(i))
+Next
+
+'=== Define Segments ===
+Dim segments()
+ReDim segments(17)
+For i = 0 To 16
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+'=== Create Polyline in HFSS ===
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", True, _
+  Array("NAME:PolylinePoints", pointArray), _
+  Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", "Name:=", "AdjustableMicrostrip", _
+    "Flags:=", "", "Color:=", "(132 132 193)", "Transparency:=", 0, _
+    "PartCoordinateSystem:=", "Global", "MaterialName:=", "copper", "SolveInside:=", True)
