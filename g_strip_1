@@ -1,0 +1,73 @@
+' Initialize HFSS objects (adjust if running outside HFSS environment)
+Dim oAnsysApp
+Dim oDesktop
+Dim oProject
+Dim oDesign
+Dim oEditor
+
+Set oAnsysApp = CreateObject("AnsysElectronicsDesktopScriptingUtil.ScriptingServer")
+Set oDesktop = oAnsysApp.GetAppDesktop()
+Set oProject = oDesktop.GetActiveProject()
+Set oDesign = oProject.GetActiveDesign()
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+' Optional: Define local variables for adjustability
+oDesign.ChangeProperty Array("NAME:AllTabs", _
+  Array("NAME:LocalVariableTab", _
+    Array("NAME:PropServers", "LocalVariables"), _
+    Array("NAME:NewProps", _
+      Array("NAME:z_height", "PropType:=", "VariableProp", "Value:=", "12.25mil"), _
+      Array("NAME:trace_width_bottom", "PropType:=", "VariableProp", "Value:=", "7mil") _
+      ' Add more, e.g., Array("NAME:bottom_length", "PropType:=", "VariableProp", "Value:=", "51.946mil"), _
+      ' then use in points like "X:=", "-321.2681912mil + bottom_length" _
+    ) _
+  ) _
+)
+
+' Create the polyline (use variables where possible for adjustability)
+oEditor.CreatePolyline _
+  Array("NAME:PolylineParameters", _
+    "IsPolylineCovered:=", True, _
+    "IsPolylineClosed:=", True _
+  ), _
+  Array("NAME:PolylinePoints", _
+    Array("NAME:PLPoint", "X:=", "-321.2681912mil", "Y:=", "-117.5374996mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-321.2681912mil", "Y:=", "-124.5374996mil", "Z:=", "z_height"), _  ' Example: could be "-117.5374996mil - trace_width_bottom"
+    Array("NAME:PLPoint", "X:=", "-269.3222142mil", "Y:=", "-124.5374996mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-250.7346861mil", "Y:=", "-109.9499715mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-250.7346861mil", "Y:=", "0.318002405mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-238.7524027mil", "Y:=", "8.192018153mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-238.7524027mil", "Y:=", "10.84952449mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-193.6343184mil", "Y:=", "10.84952449mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-193.6343184mil", "Y:=", "-98.11330402mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-189.6973106mil", "Y:=", "-98.11330402mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-189.6973106mil", "Y:=", "41.81409142mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-244.945316mil", "Y:=", "41.81409142mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-269.7169696mil", "Y:=", "17.04243788mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-269.7169696mil", "Y:=", "8.192018153mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-257.7346861mil", "Y:=", "0.318002406mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-257.7346861mil", "Y:=", "-103.0504766mil", "Z:=", "z_height"), _
+    Array("NAME:PLPoint", "X:=", "-272.2217091mil", "Y:=", "-117.5374996mil", "Z:=", "z_height") _
+  ), _
+  Array("NAME:PolylineSegments", _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 0, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 1, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 2, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 3, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 4, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 5, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 6, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 7, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 8, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 9, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 10, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 11, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 12, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 13, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 14, "NoOfPoints:=", 2), _
+    Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 15, "NoOfPoints:=", 2) _
+  )
+
+' Optional: Set material, thickness, or assign as perfect conductor if needed for microstrip
+' oEditor.AssignMaterial Array("NAME:AssignMat", "Objects:=", Array("Polyline1"), "MaterialName:=", "copper")
+' oEditor.SetVariableValue "z_height", "12.25mil"  ' To adjust later
