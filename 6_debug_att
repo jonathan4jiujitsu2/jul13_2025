@@ -1,0 +1,22 @@
+Dim z_val: z_val = "0mm"
+
+Dim vx(3), vy(3)
+vx(0) = "0mm": vy(0) = "0mm"
+vx(1) = "10mm": vy(1) = "0mm"
+vx(2) = "10mm": vy(2) = "10mm"
+vx(3) = "0mm": vy(3) = "10mm"
+
+Dim polyPoints(3)
+For i = 0 To 3
+  polyPoints(i) = Array("NAME:PLPoint", "X:=", vx(i), "Y:=", vy(i), "Z:=", z_val)
+Next
+
+Dim segments(2)
+For i = 0 To 2
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", "IsPolylineCovered:=", True, "IsPolylineClosed:=", True, _
+  Array("NAME:PolylinePoints", polyPoints), Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", "Name:=", "TestPoly", "MaterialName:=", "copper", "SolveInside:=", False)
