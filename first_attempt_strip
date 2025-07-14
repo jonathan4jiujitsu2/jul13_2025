@@ -1,0 +1,48 @@
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "MicrostripPolygon", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+' Define polyline points
+Dim polylinePoints
+polylinePoints = Array( _
+  Array("NAME:PLPoint", "X:=", "-321.2681912mm", "Y:=", "-117.5374996mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-321.2681912mm", "Y:=", "-124.5374996mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-269.3222142mm", "Y:=", "-124.5374996mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-250.7346861mm", "Y:=", "-109.9499715mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-250.7346861mm", "Y:=", "0.318002405mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-238.7524027mm", "Y:=", "8.192018153mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-238.7524027mm", "Y:=", "10.84952449mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-193.6343184mm", "Y:=", "10.84952449mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-193.6343184mm", "Y:=", "-98.11330402mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-189.6973106mm", "Y:=", "-98.11330402mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-189.6973106mm", "Y:=", "41.81409142mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-244.945316mm", "Y:=", "41.81409142mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-269.7169696mm", "Y:=", "17.04243788mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-269.7169696mm", "Y:=", "8.192018153mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-257.7346861mm", "Y:=", "0.318002406mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-257.7346861mm", "Y:=", "-103.0504766mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-272.2217091mm", "Y:=", "-117.5374996mm", "Z:=", "12.25mm"), _
+  Array("NAME:PLPoint", "X:=", "-321.2681912mm", "Y:=", "-117.5374996mm", "Z:=", "12.25mm") _ ' Close loop
+)
+
+' Define segments
+Dim segments(17)
+Dim i
+For i = 0 To 16
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+' Create the polyline
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", True, _
+  Array("NAME:PolylinePoints", polylinePoints), _
+  Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", "Name:=", "MicrostripPolygon", "Flags:=", "", "Color:=", "(132 132 193)", _
+    "Transparency:=", 0, "PartCoordinateSystem:=", "Global", "MaterialName:=", "copper", _
+    "SolveInside:=", True)
