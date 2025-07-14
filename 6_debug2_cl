@@ -1,0 +1,190 @@
+' HFSS VBScript to create microstrip line from vertex coordinates
+' Working clockwise from vertex 1 to vertex 17
+
+Dim oAnsoftApp
+Dim oDesktop
+Dim oProject
+Dim oDesign
+Dim oEditor
+
+' Initialize HFSS
+On Error Resume Next
+Set oAnsoftApp = CreateObject("Ansoft.ElectronicsDesktop")
+If Err.Number <> 0 Then
+    MsgBox "Failed to create HFSS application object. Make sure HFSS is installed."
+    WScript.Quit
+End If
+On Error GoTo 0
+
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+MsgBox "Successfully connected to HFSS Desktop"
+
+' Get active project and design
+Set oProject = oDesktop.GetActiveProject()
+If oProject Is Nothing Then
+    MsgBox "No active project found. Please open a project first."
+    WScript.Quit
+End If
+
+Set oDesign = oProject.GetActiveDesign()
+If oDesign Is Nothing Then
+    MsgBox "No active design found. Please open a design first."
+    WScript.Quit
+End If
+
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+MsgBox "Got 3D Modeler editor successfully"
+
+' Define vertices as arrays for easier manipulation
+Dim vertexX(17), vertexY(17), vertexZ(17)
+
+' Populate vertex coordinates
+vertexX(1) = -321.2681912
+vertexY(1) = -117.5374996
+vertexZ(1) = 12.25
+
+vertexX(2) = -321.2681912
+vertexY(2) = -124.5374996
+vertexZ(2) = 12.25
+
+vertexX(3) = -289.3222142
+vertexY(3) = -124.5374996
+vertexZ(3) = 12.25
+
+vertexX(4) = -250.7346861
+vertexY(4) = -109.9499715
+vertexZ(4) = 12.25
+
+vertexX(5) = -250.7346861
+vertexY(5) = 0.318002405
+vertexZ(5) = 12.25
+
+vertexX(6) = -238.7524027
+vertexY(6) = 8.192018153
+vertexZ(6) = 12.25
+
+vertexX(7) = -238.7524027
+vertexY(7) = 10.84952449
+vertexZ(7) = 12.25
+
+vertexX(8) = -193.6343184
+vertexY(8) = 10.84952449
+vertexZ(8) = 12.25
+
+vertexX(9) = -193.6343184
+vertexY(9) = -98.11330402
+vertexZ(9) = 12.25
+
+vertexX(10) = -189.6973106
+vertexY(10) = -98.11330402
+vertexZ(10) = 12.25
+
+vertexX(11) = -189.6973106
+vertexY(11) = 41.81409142
+vertexZ(11) = 12.25
+
+vertexX(12) = -244.945316
+vertexY(12) = 41.81409142
+vertexZ(12) = 12.25
+
+vertexX(13) = -269.7169696
+vertexY(13) = 17.04243788
+vertexZ(13) = 12.25
+
+vertexX(14) = -269.7169696
+vertexY(14) = 8.192018153
+vertexZ(14) = 12.25
+
+vertexX(15) = -257.7346861
+vertexY(15) = 0.318002406
+vertexZ(15) = 12.25
+
+vertexX(16) = -257.7346861
+vertexY(16) = -103.0504766
+vertexZ(16) = 12.25
+
+vertexX(17) = -272.2217091
+vertexY(17) = -117.5374996
+vertexZ(17) = 12.25
+
+MsgBox "Vertex coordinates loaded successfully"
+
+' Build the polyline points array
+Dim polylinePoints()
+ReDim polylinePoints(50) ' Allocate enough space
+
+Dim pointIndex
+pointIndex = 0
+
+' Add all vertices in order (1 through 17)
+Dim i
+For i = 1 To 17
+    polylinePoints(pointIndex) = "NAME:PLPoint"
+    polylinePoints(pointIndex + 1) = "X:=" & CStr(vertexX(i)) & "mm"
+    polylinePoints(pointIndex + 2) = "Y:=" & CStr(vertexY(i)) & "mm"
+    polylinePoints(pointIndex + 3) = "Z:=" & CStr(vertexZ(i)) & "mm"
+    pointIndex = pointIndex + 4
+Next
+
+' Resize array to actual size
+ReDim Preserve polylinePoints(pointIndex - 1)
+
+MsgBox "Polyline points array created with " & CStr(17) & " vertices"
+
+' Create the polyline
+On Error Resume Next
+oEditor.CreatePolyline Array("NAME:PolylineParameters", _
+    "IsPolylineCovered:=", true, _
+    "IsPolylineClosed:=", false, _
+    Array("NAME:PolylinePoints", polylinePoints), _
+    Array("NAME:PolylineSegments", _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 0, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 1, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 2, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 3, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 4, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 5, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 6, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 7, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 8, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 9, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 10, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 11, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 12, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 13, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 14, "NoOfPoints:=", 2), _
+        Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 15, "NoOfPoints:=", 2)), _
+    Array("NAME:PolylineXSection", "XSectionType:=", "None", "XSectionOrient:=", "Auto", _
+        "XSectionWidth:=", "0mm", "XSectionTopWidth:=", "0mm", "XSectionHeight:=", "0mm", "XSectionNumSegments:=", "0", "XSectionBendType:=", "Corner"), _
+    Array("NAME:Attributes", "Name:=", "Microstrip_Line", "Flags:=", "", "Color:=", "(255 0 0)", _
+        "Transparency:=", 0, "PartCoordinateSystem:=", "Global", "UDMId:=", "", "MaterialValue:=", "" & Chr(34) & "copper" & Chr(34), _
+        "SurfaceMaterialValue:=", "" & Chr(34) & "" & Chr(34), "SolveInside:=", true, "ShellElement:=", false, "ShellElementThickness:=", "0mm", _
+        "IsMaterialEditable:=", true, "UseMaterialAppearance:=", false, "IsLightweight:=", false))
+
+If Err.Number <> 0 Then
+    MsgBox "Error creating polyline: " & Err.Description
+    Err.Clear
+Else
+    MsgBox "Microstrip line created successfully!"
+End If
+On Error GoTo 0
+
+' Optional: Create a parametric version with variables
+Dim createParametric
+createParametric = MsgBox("Do you want to create design variables for key dimensions?", vbYesNo, "Create Parametric Model")
+
+If createParametric = vbYes Then
+    ' Add some key variables
+    oDesign.ChangeProperty Array("NAME:AllTabs", _
+        Array("NAME:LocalVariableTab", _
+            Array("NAME:PropServers", "LocalVariables"), _
+            Array("NAME:NewProps", _
+                Array("NAME:gap_width", "PropType:=", "VariableProp", "UserDef:=", true, "Value:=", "7mm"), _
+                Array("NAME:trace_width", "PropType:=", "VariableProp", "UserDef:=", true, "Value:=", "4mm"), _
+                Array("NAME:res_length", "PropType:=", "VariableProp", "UserDef:=", true, "Value:=", "150mm"), _
+                Array("NAME:res_width", "PropType:=", "VariableProp", "UserDef:=", true, "Value:=", "110mm"))))
+    
+    MsgBox "Design variables created. You can now modify the geometry using these parameters."
+End If
+
+MsgBox "Script completed successfully!"
