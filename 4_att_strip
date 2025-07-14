@@ -1,0 +1,106 @@
+' Initialize HFSS
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "HybridMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS Initialized and new project created."
+
+' Define parametric variables
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", _
+  Array("NAME:PropServers", "LocalVariables"), _
+  Array("NAME:NewProps", _
+    Array("NAME:Rect1_X", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "-321.27mm"), _
+    Array("NAME:Rect1_Y", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "-124.54mm"), _
+    Array("NAME:Rect1_W", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "2mm"), _
+    Array("NAME:Rect1_H", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "7mm"), _
+    Array("NAME:z_val", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "12.25mm"), _
+    Array("NAME:Rect2_W", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "52mm"), _
+    Array("NAME:Rect2_H", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "2mm"), _
+    Array("NAME:Rect3_X", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "-257.73mm"), _
+    Array("NAME:Rect3_Y", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "-103.05mm"), _
+    Array("NAME:Rect3_W", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "2mm"), _
+    Array("NAME:Rect3_H", "PropType:=", "VariableProp", "UserDef:=", True, "Value:=", "114mm") _
+)))
+
+MsgBox "Variables defined."
+
+' Rect 1
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "Rect1_X", "YStart:=", "Rect1_Y", "ZStart:=", "z_val", _
+  "Width:=", "Rect1_W", "Height:=", "Rect1_H", "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect1", "MaterialName:=", "copper", "SolveInside:=", False)
+MsgBox "Rect1 created."
+
+' Rect 2
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "Rect1_X", _
+  "YStart:=", "Rect1_Y", _
+  "ZStart:=", "z_val", _
+  "Width:=", "Rect2_W", _
+  "Height:=", "Rect2_H", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect2", "MaterialName:=", "copper", "SolveInside:=", False)
+MsgBox "Rect2 created."
+
+' Rect 3
+oEditor.CreateRectangle Array( _
+  "NAME:RectangleParameters", _
+  "XStart:=", "Rect3_X", _
+  "YStart:=", "Rect3_Y", _
+  "ZStart:=", "z_val", _
+  "Width:=", "Rect3_W", _
+  "Height:=", "Rect3_H", _
+  "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Rect3", "MaterialName:=", "copper", "SolveInside:=", False)
+MsgBox "Rect3 created."
+
+' Angled Section Polyline (TR3 & TR4 region)
+Dim polyPoints
+polyPoints = Array( _
+  Array("NAME:PLPoint", "X:=", "-244.95mm", "Y:=", "41.81mm", "Z:=", "z_val"), _
+  Array("NAME:PLPoint", "X:=", "-269.71mm", "Y:=", "17.04mm", "Z:=", "z_val"), _
+  Array("NAME:PLPoint", "X:=", "-269.71mm", "Y:=", "8.19mm", "Z:=", "z_val"), _
+  Array("NAME:PLPoint", "X:=", "-257.73mm", "Y:=", "0.318mm", "Z:=", "z_val"), _
+  Array("NAME:PLPoint", "X:=", "-257.73mm", "Y:=", "-103.05mm", "Z:=", "z_val") _
+)
+
+Dim segments(4)
+Dim i
+For i = 0 To 4
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+' Create the angled polyline
+On Error Resume Next
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", False, _
+  Array("NAME:PolylinePoints", polyPoints), _
+  Array("NAME:PolylineSegments", segments) _
+), Array("NAME:Attributes", "Name:=", "AngledEdge", "MaterialName:=", "copper", "SolveInside:=", False)
+
+If Err.Number <> 0 Then
+  MsgBox "Error during CreatePolyline: " & Err.Description
+  WScript.Quit
+Else
+  MsgBox "Polyline created."
+End If
+On Error GoTo 0
+
+' Unite all parts
+On Error Resume Next
+oEditor.Unite Array("Rect1", "Rect2", "Rect3", "AngledEdge")
+If Err.Number <> 0 Then
+  MsgBox "Error during Unite: " & Err.Description
+Else
+  MsgBox "Geometry united successfully!"
+End If
+
+MsgBox "⚠️ Reminder: Solving inside a solid with high conductivity (like copper) may require a fine mesh. You can set SolveInside := False to avoid unnecessary meshing."
