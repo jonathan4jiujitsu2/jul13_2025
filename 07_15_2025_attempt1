@@ -1,0 +1,78 @@
+' === HFSS Initialization ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "ParametricStripline", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS Ready"
+
+' === Parametric Z value ===
+Dim z_val: z_val = "12.25mm"
+
+' === Define X and Y as strings (you can swap these with formulas later)
+Dim x(16), y(16)
+x(0) = "-321.2681912mm": y(0) = "-117.5374996mm"
+x(1) = "-321.2681912mm": y(1) = "-124.5374996mm"
+x(2) = "-269.3222142mm": y(2) = "-124.5374996mm"
+x(3) = "-250.7346861mm": y(3) = "-109.9499715mm"
+x(4) = "-250.7346861mm": y(4) = "0.318002405mm"
+x(5) = "-238.7524027mm": y(5) = "8.192018153mm"
+x(6) = "-238.7524027mm": y(6) = "10.84952449mm"
+x(7) = "-193.6343184mm": y(7) = "10.84952449mm"
+x(8) = "-193.6343184mm": y(8) = "-98.11330402mm"
+x(9) = "-189.6973106mm": y(9) = "-98.11330402mm"
+x(10)= "-189.6973106mm": y(10)= "41.81409142mm"
+x(11)= "-244.945316mm":  y(11)= "41.81409142mm"
+x(12)= "-269.7169696mm": y(12)= "17.04243788mm"
+x(13)= "-269.7169696mm": y(13)= "8.192018153mm"
+x(14)= "-257.7346861mm": y(14)= "0.318002406mm"
+x(15)= "-257.7346861mm": y(15)= "-103.0504766mm"
+x(16)= "-272.2217091mm": y(16)= "-117.5374996mm"
+
+MsgBox "Point coordinates set."
+
+' === Build PolylinePoints array ===
+Dim polyPoints()
+ReDim polyPoints(16)
+Dim i
+For i = 0 To 16
+    polyPoints(i) = Array("NAME:PLPoint", "X:=", x(i), "Y:=", y(i), "Z:=", z_val)
+Next
+
+' === Build segments: 16 segments for 17 points; last one closes the shape automatically
+Dim segments()
+ReDim segments(15)
+For i = 0 To 15
+    segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+MsgBox "Polyline points and segments built."
+
+' === Create the polyline ===
+oEditor.CreatePolyline Array( _
+    "NAME:PolylineParameters", _
+    "IsPolylineCovered:=", True, _
+    "IsPolylineClosed:=", True, _
+    Array("NAME:PolylinePoints", polyPoints), _
+    Array("NAME:PolylineSegments", segments), _
+    Array("NAME:PolylineXSection", _
+        "XSectionType:=", "None", _
+        "XSectionOrient:=", "Auto", _
+        "XSectionWidth:=", "0mm", _
+        "XSectionTopWidth:=", "0mm", _
+        "XSectionHeight:=", "0mm", _
+        "XSectionNumSegments:=", "0", _
+        "XSectionBendType:=", "Corner") _
+), Array("NAME:Attributes", _
+    "Name:=", "CustomStripline", _
+    "Flags:=", "", _
+    "Color:=", "(132 132 193)", _
+    "Transparency:=", 0, _
+    "PartCoordinateSystem:=", "Global", _
+    "MaterialName:=", "copper", _
+    "SolveInside:=", False)
+
+MsgBox "✅ Polyline created successfully using hairpin-style structure!"
