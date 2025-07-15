@@ -1,0 +1,50 @@
+' === HFSS Initialization ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "TestPolyline", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS Initialized"
+
+' === Define 3 hardcoded polyline points (a triangle) ===
+Dim polyPoints(2)
+polyPoints(0) = Array("NAME:PLPoint", "X:=", "0mm", "Y:=", "0mm", "Z:=", "0mm")
+polyPoints(1) = Array("NAME:PLPoint", "X:=", "10mm", "Y:=", "0mm", "Z:=", "0mm")
+polyPoints(2) = Array("NAME:PLPoint", "X:=", "5mm", "Y:=", "10mm", "Z:=", "0mm")
+
+' === Define 3 segments (0→1, 1→2, 2→0 via IsPolylineClosed) ===
+Dim segments(2)
+segments(0) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 0, "NoOfPoints:=", 2)
+segments(1) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 1, "NoOfPoints:=", 2)
+segments(2) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", 2, "NoOfPoints:=", 2)
+
+MsgBox "Points and segments ready"
+
+' === Create the closed polyline ===
+oEditor.CreatePolyline Array( _
+    "NAME:PolylineParameters", _
+    "IsPolylineCovered:=", True, _
+    "IsPolylineClosed:=", True, _
+    Array("NAME:PolylinePoints", polyPoints), _
+    Array("NAME:PolylineSegments", segments), _
+    Array("NAME:PolylineXSection", _
+        "XSectionType:=", "None", _
+        "XSectionOrient:=", "Auto", _
+        "XSectionWidth:=", "0mm", _
+        "XSectionTopWidth:=", "0mm", _
+        "XSectionHeight:=", "0mm", _
+        "XSectionNumSegments:=", "0", _
+        "XSectionBendType:=", "Corner") _
+), Array("NAME:Attributes", _
+    "Name:=", "TestShape", _
+    "Flags:=", "", _
+    "Color:=", "(132 132 193)", _
+    "Transparency:=", 0, _
+    "PartCoordinateSystem:=", "Global", _
+    "MaterialName:=", "copper", _
+    "SolveInside:=", False)
+
+MsgBox "✅ Triangle polyline created successfully!"
