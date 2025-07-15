@@ -1,0 +1,987 @@
+'Initialize variables
+
+Dim oAnsoftApp
+Dim oDesktop
+Dim oProject
+Dim oDesign
+Dim oEditor
+Dim oModule
+Dim Sres_var_value(40)
+Dim Lres_var_value(40)
+Dim L_var_value(40)
+Dim Gap_var_value(40)
+Dim Lcoupled_var_value(40)
+Dim Wcoupled_var_value(40)
+Dim DeltaL_var_value(40)
+
+'Set project objects
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oProject = oDesktop.GetActiveProject
+oProject.InsertDesign "HFSS", "HFSSDesign1", "DrivenModal", ""
+Set oDesign = oProject.GetActiveDesign
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+'STATIC VARIABLES
+
+'Material Properties
+
+sub_material_name="Substrate_Name%&"
+sub_dielectric_constant="Substrate_Er%&"
+sub_dielectric_loss_tangent="Substrate_loss_tangent%^&"
+
+cond_material_name="Conductor_Name%&"
+cond_bulk_conductivity="Conductor_bulk_cond%&"
+
+Set oDefinitionManager = oProject.GetDefinitionManager()
+
+oDefinitionManager.AddMaterial Array("NAME:"&sub_material_name, "CoordinateSystemType:=",_
+"Cartesian", Array("NAME:AttachedData"), "permittivity:=", sub_dielectric_constant, "dielectric_loss_tangent:=", sub_dielectric_loss_tangent)
+
+oDefinitionManager.AddMaterial Array("NAME:"&cond_material_name, "CoordinateSystemType:=",_
+"Cartesian", Array("NAME:AttachedData"), Array("NAME:ModifierData"), "conductivity:=", cond_bulk_conductivity)
+
+'Solution Setup
+
+solution_freq_value = "Center%&" 'This should be set to the center of your passband
+
+
+solution_freq = solution_freq_value & "GHz" 'Comment out if not using user interface
+solution_freq_value_l1 = Center%^& + Delta_fc_mesh%^& 'This should be set to the center of your passband
+solution_freq_l1 = solution_freq_value_l1 & "GHz" 'Comment out if not using user interface
+solution_freq_value_l2 = Center%^& - Delta_fc_mesh%^& 'This should be set to the center of your passband
+solution_freq_l2 = solution_freq_value_l2 & "GHz" 'Comment out if not using user interface
+sweep_type = "Fast" 'Choices are Fast, Interpolating, Discrete
+start_freq = "Start%^&GHz"
+end_freq_value = "Stop%^&" 'This should be set to the highest freq of concern, sets via spacing wavelength
+end_freq = end_freq_value & "GHz" 'Comment out if not using user interface
+step_size = "0.01GHz"
+max_delta_s = 0.01 'Convergence Setting
+num_passes = 40 'Ensure this is set high enough to not limit the convergence
+percent_refine = 10 'The lower this number the less HFSS will overmesh, but this will require more passes
+
+via_count=1
+
+'Size Properties
+
+layer_h = "Layer_Height%&" 'Substrate height
+num_layers_b = 2 'Numbers of substrate layers below the conductor
+num_layers_a = 2 'Numbers of substrate layers above the conductor
+cond_h = "Conductor_Thickness%^&" 'Conductor thickness
+via_r_value = 3.6 'Via radius
+via_pullback_value = 2 'Via pullback
+striping_width_value = 10 'Striping width
+airbox_h = "Airbox_Height%^&" 'Airbox height above substrate
+
+min_via_spacing_value = via_r_value*2*2 'Minimum center to center via spacing
+
+'Get User Input
+
+num_elements = "reson%^&" 'this produces some problems
+If num_elements<>"" Then
+layer_h = InputBox("Enter the height (mil) of one substrate layer: ", "Layer Height",8,4)
+If layer_h<>"" Then
+num_layers_b = InputBox("Enter the number of layers below conductor: ", "Layers Below",2)
+If num_layers_b<>"" Then
+num_layers_a = InputBox("Enter the number of layers above conductor: ", "Layers Above",2)
+If num_layers_a<>"" Then
+
+
+
+
+num_port_layers_b = InputBox("Enter the number of layers below conductor for port: ", "Layers Below", 1)
+
+If num_port_layers_b <> "" Then
+
+num_port_layers_a = InputBox("Enter the number of layers above conductor for port: ", "Layers Above", 1)
+
+If num_port_layers_a <> "" Then
+
+cond_h = InputBox("Enter conductor height (mil): ", "Conductor Height", 0.3)
+
+If cond_h <> "" Then
+
+solution_freq_value = 12.5
+
+If solution_freq_value <> "" Then
+
+solution_freq = solution_freq_value & "GHZ" 'Comment out if not using user interface
+
+start_freq = 8
+
+If start_freq <> "" Then
+
+start_freq = start_freq & "GHZ" 'Comment out if not using user interface
+
+end_freq = 16
+
+If end_freq <> "" Then
+
+end_freq = end_freq & "GHZ" 'Comment out if not using user interface
+
+via_r_value = InputBox("Enter the via radius (mil): ", "Via Radius", 3.6)
+
+If via_r_value <> "" Then
+
+via_pullback_value = InputBox("Enter the via pullback (mil): ", "Via Pullback", 4)
+
+If via_pullback_value <> "" Then
+
+striping_width_value = InputBox("Enter the striping width (mil): ", "Striping Width", 4)
+
+If striping_width_value <> "" Then
+
+
+
+
+'Get user inputs for filter length and first element
+
+Edge_wall_pullback_value = "Edge_wall_pullback%^&"
+
+If Edge_wall_pullback_value<>"" Then
+
+Port_wall_pullback_value = "Port_wall_pullback%^&"
+
+If Port_wall_pullback_value<>"" Then
+
+Loffset_value = "Loffset%^&"
+
+If Loffset_value<>"" Then
+
+L1a_value = "L1a%^&"
+
+If L1a_value<>"" Then
+
+L1b_value = "L1b%^&"
+
+If L1b_value<>"" Then
+
+Wio_value = "Wio%^&"
+
+If Wio_value<>"" Then
+
+Port_Width_value = "Port_Width%^&"
+
+If Port_Width_value<>"" Then
+
+
+
+
+Lio_value = "Lio%^&"
+
+If Lio_value<>"" Then
+
+Lres_value = InputBox("Enter the length of the resontors (mil): ", "Lres", 80)
+
+If Lres_value<>"" Then
+
+W1_value = "W1%^&"
+
+If W1_value<>"" Then
+
+
+
+ChamferSide_value = 1.272792*W1_value
+
+
+layer_h_value = CDbl(layer_h)
+
+airbox_h_value = CDbl(airbox_h)
+
+ChamferSide_value = CDbl(ChamferSide_value)
+
+
+
+Edge_wall_pullback=Edge_wall_pullback_value&"mil"
+
+Port_wall_pullback=Port_wall_pullback_value&"mil"
+
+Loffset=Loffset_value&"mil"
+
+L1a=L1a_value&"mil"
+
+L1b=L1b_value&"mil"
+
+Ltop=Ltop_value&"mil"
+
+Wio=Wio_value&"mil"
+
+Port_Width=Port_Width_value&"mil"
+
+Lio=Lio_value&"mil"
+
+Lres=Lres_value&"mil"
+
+W1=W1_value&"mil"
+
+ChamferSide="1.272792*W1"
+
+
+
+%^&addline_Sres%^&
+
+%^&addline_Lres%^&
+
+%^&addline_L%^&
+
+%^&addline_Gap%^&
+
+%^&addline_Lcoupled%^&
+
+%^&addline_Wcoupled%^&
+
+%^&addline_DeltaL%^&
+
+
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"UserDef:=", _ "LocalVariables"), Array("NAME:NewProps", Array("NAME:Edge_wall_pullback", "PropType:=", "VariableProp",
+true, "Value:=", Edge_wall_pullback))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers",_
+"UserDef:=", "LocalVariables"), Array("NAME:NewProps", Array("NAME:Port_wall_pullback", "PropType:=", "VariableProp",_
+true, "Value:=", Port_wall_pullback))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers",_
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Loffset", "PropType:=", "VariableProp", "UserDef:=",_
+true, "Value:=", Loffset))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers",_
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:L1a", "PropType:=", "VariableProp", "UserDef:=",_
+true, "Value:=", L1a))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers",_
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:L1b", "PropType:=", "VariableProp", "UserDef:=",_
+true, "Value:=", L1b))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers",_
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Wio", "PropType:=", "VariableProp", "UserDef:=",_
+true, "Value:=", Wio))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers",_
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Port_Width", "PropType:=", "VariableProp", "UserDef:=",_
+true, "Value:=", Port_Width))))
+
+
+
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lio", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Lio))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lres", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Lres))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:W1", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", W1))))oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lio", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Lio))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lres", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Lres))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:W1", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", W1))))
+
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:ChamferSide", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", ChamferSide))))
+
+' Add variable to shift all resonators at once
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:ResonatorDeltaL", "PropType:=", _
+"VariableProp", "UserDef:=", _
+true, "Value:=", "0mil"))))
+
+L_var_value(2) = 90
+L_var=L_var_value(2)&"mil"
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:L2", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", L_var))))
+
+Lcoupled_var_value(1) = 30
+Lcoupled_var=Lcoupled_var_value(1)&"mil"
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lcoupled1", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Lcoupled_var))))
+
+
+Wcoupled_var_value(1) = W1_value
+
+Wcoupled_var=Wcoupled_var_value(1)&"mil"
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Wcoupled1", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Wcoupled_var))))
+
+
+
+L1c_value = Lcoupled_var_value(1)
+
+L1c=L1c_value&"mil"
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:L1c", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", L1c))))
+
+
+
+Gap_var_value(1) = 5
+
+Gap_var=Gap_var_value(1)&"mil"
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+
+
+
+
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Gap1", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Gap_var))))
+
+'Get user input for the rest of the element widths and spacings
+
+For e = 2 to int(num_elements/2+1)
+
+'Sres_var_value(e-1) = 2
+'Lres_var_value(e-1) = 390
+'L_var_value(e+1) = 90
+'Lcoupled_var_value(e) = 30
+'Wcoupled_var_value(e) = W1_value
+'Gap_var_value(e) = 5
+'DeltaL_var_value(e) = 0
+
+Sres_var=Sres_var_value(e-1)&"mil"
+Lres_var=Lres_var_value(e-1)&"mil"
+L_var=L_var_value(e+1)&"mil"
+Lcoupled_var=Lcoupled_var_value(e)&"mil"
+Wcoupled_var=Wcoupled_var_value(e)&"mil"
+Gap_var=Gap_var_value(e)&"mil"
+DeltaL_var=DeltaL_var_value(e)&"mil"
+
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Sres"&e-1, "PropType:=", _
+"VariableProp", "UserDef:=", _
+true, "Value:=", Sres_var))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lres"&e-1, "PropType:=", _
+"VariableProp", "UserDef:=", _
+true, "Value:=", Lres_var&"+ResonatorDeltaL"))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:L"&e+1, "PropType:=", _
+"VariableProp", "UserDef:=", _
+true, "Value:=", L_var))))
+
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Lcoupled"&e,
+"PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Lcoupled_var))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Wcoupled"&e,
+"PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", Wcoupled_var))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:Gap"&e, "PropType:=",
+"VariableProp", "UserDef:=", _
+true, "Value:=", Gap_var))))
+
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab",
+Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:DeltaL"&e, "PropType:=",
+"VariableProp", "UserDef:=", _
+true, "Value:=", DeltaL_var))))
+
+Next
+
+
+'Setup Units
+
+layer_h=layer_h&"mil"
+
+cond_h=cond_h&"mil"
+
+via_r=via_r_value&"mil"
+
+via_pullback=via_pullback_value&"mil"
+
+striping_width=striping_width_value&"mil"
+
+min_via_spacing=min_via_spacing_value&"mil"
+
+airbox_h=airbox_h&"mil"
+
+oEditor.SetModelUnits Array("NAME:Units Parameter", "Units:=", "mil", "Rescale:=", _
+false)
+
+
+
+'Create variables in project
+
+'Layer height
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:layer_h", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", layer_h))))
+
+'Number of layers below conductor
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:num_layers_b", "PropType:=", "VariableProp", _
+"UserDef:=", _
+true, "Value:=", num_layers_b))))
+
+'Number of layers above conductor
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:num_layers_a", "PropType:=", "VariableProp", _
+"UserDef:=", _
+true, "Value:=", num_layers_a))))
+
+'Number of layers below port conductor
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:num_port_layers_b", "PropType:=", "VariableProp", _
+"UserDef:=", _
+true, "Value:=", num_port_layers_b))))
+
+
+
+
+'Number of layers above port conductor
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:num_port_layers_a", "PropType:=", "VariableProp", _
+"UserDef:=", _
+true, "Value:=", num_port_layers_a))))
+
+'Conductor height
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:cond_h", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", cond_h))))
+
+'Airbox height
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:airbox_h", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", airbox_h))))
+
+
+
+
+
+'Via radius
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:via_r", "PropType:=", "VariableProp", "UserDef:=", _
+true, "Value:=", via_r))))
+
+wavelength = 11802852700/(solution_freq_value*1000000000*(1*sub_dielectric_constant)^0.5)*1000 '[mils]
+msgbox ("Wavelength = " & wavelength & "mils")
+
+'Via pullback
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:via_pullback", "PropType:=", "VariableProp", _
+"UserDef:=", _
+true, "Value:=", via_pullback))))
+
+'Striping width
+oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+"LocalVariables"), Array("NAME:NewProps", Array("NAME:striping_width", "PropType:=", "VariableProp", _
+"UserDef:=", _
+true, "Value:=", striping_width))))
+
+
+
+
+L1a_value=CDbl(L1a_value)
+L1b_value=CDbl(L1b_value)
+L_res_value=CDbl(L_res_value)
+Loffset_value=CDbl(Loffset_value)
+Wio_value=CDbl(Wio_value)
+W1_value=CDbl(W1_value)
+Lio_value=CDbl(Lio_value)
+Port_Width_value=CDbl(Port_Width_value)
+Edge_wall_pullback_value=CDbl(Edge_wall_pullback_value)
+Port_wall_pullback_value=CDbl(Port_wall_pullback_value)
+via_r_value=CDbl(via_r_value)
+via_pullback_value=CDbl(via_pullback_value)
+striping_width_value=CDbl(striping_width_value)
+min_via_spacing_value=CDbl(min_via_spacing_value)
+wavelength=CDbl(wavelength)
+
+'Initialize x location of filter elements
+
+
+
+
+
+
+x_loc = "0mil"
+
+'Initialize y location of filter elements
+
+y_loc = "-L1a"
+
+'**********************************************************************************************************************************
+'*****
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Wio", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "23.6mil"))))
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Lio", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "100mil"))))
+
+
+
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:W1", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "7.5mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:ChamferSide", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "(1.272792*W1)+0mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:L1a", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "159.8mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:L1b", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "36.7mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:L2", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "86mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Lres1", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "376mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Sres1", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "2mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:L3", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "88.2mil"))))
+
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Lres2", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "390mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Sres2", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "2.9mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:L4", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "89.6mil"))))
+
+'oDesign.ChangeProperty Array("NAME:AllTabs", Array("NAME:LocalVariableTab", Array("NAME:PropServers", _
+' "LocalVariables"), Array("NAME:NewProps", Array("NAME:Lres3", "PropType:=", "VariableProp", "UserDef:=", _
+' true, "Value:=", "369mil"))))
+
+'oEditor.SweepAlongVector Array("NAME:Selections", "Selections:=", "Polyline1,Polyline2,Polyline3", "NewPartsModelFlag:=", _
+' "Model"), Array("NAME:VectorSweepParameters", "DraftAngle:=", "0deg", "DraftType:=", _
+' "Round", "CheckFaceFaceIntersection:=", false, "SweepVectorX:=", "0mm", "SweepVectorY:=", _
+' "0mm", "SweepVectorZ:=", "0.3mil")
+
+'****************************************************************************************************************
+'Create each filter hairpin
+
+For n = 1 To int(num_elements)+1
+    msgbox n
+
+    msgbox (n>1)
+    msgbox (int(num_elements/2+2))
+    msgbox (n>1 And n<int(num_elements/2+2))
+    If (n>1 And n<int(num_elements/2+2)) Then
+        'Update starting x-loc of filter element for first half of elements
+        x_loc = x_loc & "+ ChamferSide*" & 2 & "+ L" & n & "+ Sres" &n-1
+        If n=2 Then
+            y_loc = y_loc & "+L1a+Wio+L1b"
+        ElseIf n Mod 2 = 1 Then
+            'Odd hairpin
+
+y_loc = y_loc & "-Lres"&(n-2)
+        Else
+            'Even hairpin
+            y_loc = y_loc & "+Lres"&(n-2)
+        End If
+    msgbox ("first is " & (n-1))
+ElseIf n>1 Then
+    'Update starting x-loc of filter element for second half of elements
+    x_loc = x_loc & "+ ChamferSide*" & 2 & "+L" & (int(num_elements)+1-(n-3)) & "+ Sres"
+    &(int(num_elements)+1-(n-1))
+    If n Mod 2 = 1 Then
+        'Odd hairpin
+        If n=int(num_elements/2+2) Then
+            y_loc = y_loc & "-Lres"&(int(num_elements)+1-(n-1))
+        Else
+            y_loc = y_loc & "-Lres"&(int(num_elements)+1-(n-2))
+        End If
+    Else
+        'Even hairpin
+        If n=int(num_elements/2+2) Then
+            y_loc = y_loc & "+Lres"&(int(num_elements)+1-(n-1))
+        Else
+            y_loc = y_loc & "+Lres"&(int(num_elements)+1-(n-2))
+        End If
+    End If
+
+
+
+
+End If
+Else
+    'Even hairpin
+    If n=int(num_elements/2+2) Then
+        y_loc = y_loc & "+Lres"&(int(num_elements)+1-(n-1))
+    Else
+        y_loc = y_loc & "+Lres"&(int(num_elements)+1-(n-2))
+    End If
+End If
+msgbox ("second is s" & (int(num_elements)-(n-1))) & " and w" & (int(num_elements)-(n-2))
+End If
+
+If n=1 Then
+    Cond_string = "L01_1"
+Else
+    Cond_string = Cond_string & ",L01_" & n
+End If
+
+'Set catchpad to the correct end of the filter element
+If n Mod 2 = 1 Then
+    'Element number is odd
+    y_val_c = "Lres + via_r" 'Catchpad y-location
+
+
+
+y_val_e = "0mil" ' Element start y-location
+    Else
+        'Element number is even
+        y_val_c = "-via_r" 'Catchpad y-location
+        y_val_e = "-Loffset" ' Element start y-location
+    End If
+
+
+
+'First half of filter
+If n=1 Then
+    'Create first filter element
+    oEditor.CreatePolyline Array("NAME:PolylineParameters", "IsPolylineCovered:=", true, "IsPolylineClosed:=", _
+    true, Array("NAME:PolylinePoints", Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc, "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc&"+L1a+Wio+L1b", "Z:=", "0mil"), _
+    Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide", "Y:=", y_loc&"+L1a+Wio+L1b+ChamferSide", "Z:=", "0mil"), _
+    Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2", "Y:=", _
+    y_loc&"+L1a+Wio+L1b+ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2", "Y:=", y_loc&"+L1a+Wio+L1b", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L2", "Y:=", y_loc&"+L1a+Wio+L1b-Lres1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide*2+L2", "Y:=", y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide", "Z:=", "0mil"), _
+    Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2+Gap"&n&"/2+(1.272792*(Wcoupled"&n&"-W1)/2)", "Y:=", _
+    y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2+Gap"&n&"/2", "Y:=", y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2+Gap"&n&"/2", "Y:=", _
+    y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide+(1.272792*(Wcoupled"&n&"-W1)/2)+Lcoupled"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2+Gap"&n&"/2+Wcoupled"&n, "Y:=", y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)+Lcoupled"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2+Gap"&n&"/2+Wcoupled"&n, "Y:=", _
+    y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide+W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide*2+L2-W1", "Y:=", y_loc&"+L1a+Wio+L1b-Lres1-ChamferSide+W1", "Z:=", _
+
+"0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L2-W1", "Y:=", _
+    y_loc&"+L1a+Wio+L1b+ChamferSide-W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+W1", "Y:=", y_loc&"+L1a+Wio+L1b+ChamferSide-W1", "Z:=", "0mil"), Array("NAME:PLPoint", _
+    "X:=", x_loc&"+W1", "Y:=", _
+    y_loc&"-ChamferSide+W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"-ChamferSide+L2/2-Gap"&n&"/2-Wcoupled"&n, "Y:=", y_loc&"-ChamferSide+W1", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2-Gap"&n&"/2-Wcoupled"&n, "Y:=", _
+    y_loc&"-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)+L1c", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2-Gap"&n&"/2", "Y:=", y_loc&"-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)+L1c", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2-Gap"&n&"/2", "Y:=", _
+    y_loc&"-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)", "Z:=", "0mil"), Array("NAME:PLPoint", _
+    "X:=", x_loc&"+ChamferSide+L2/2-Gap"&n&"/2-(1.272792*(Wcoupled"&n&"+W1)/2)", "Y:=", y_loc&"-ChamferSide", "Z:=", _
+
+"0mil"), Array("NAME:PLPoint", "X:=", x_loc&"-ChamferSide", "Y:=", y_loc&"-ChamferSide", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc, "Z:=", "0mil")), Array("NAME:PolylineSegments", Array("NAME:PLSegment", _
+    "SegmentType:=", _
+    "Line", "StartIndex:=", 0, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 1, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 2, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 3, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 4, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 5, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 6, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 7, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 8, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 9, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 10, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 11, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 12, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 13, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 14, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 15, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 16, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 17, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 18, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 19, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 20, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 21, "NoOfPoints:=", 2)), Array("NAME:PolylineXSection", "XSectionType:=", _
+    "None", "XSectionOrient:=", "Auto", "XSectionWidth:=", "0mm", "XSectionTopWidth:=", _
+    "0mm", "XSectionHeight:=", "0mm", "XSectionNumSegments:=", "0", "XSectionBendType:=", _
+    "Corner")), Array("NAME:Attributes", "Name:=", "L01_" & n, "Flags:=", "", "Color:=", _
+    "(132 132 193)", "Transparency:=", 0, "PartCoordinateSystem:=", "Global", "UDMId:=", "", _
+    "MaterialValue:=", "" & Chr(34) & "gold" & Chr(34) & "", "SolveInside:=", _
+    false)
+
+Bottom_Box_string = y_loc
+Top_Box_string = y_loc&"+L1a+Wio+L1b+ChamferSide"
+
+oEditor.CreateBox Array("NAME:BoxParameters", "XPosition:=", x_loc, "YPosition:=", _
+y_val_e & "-L1", "ZPosition:=", "0mil", "XSize:=", "w" & n, "YSize:=", "Lres+L1", "ZSize:=", _
+"cond_h"), Array("NAME:Attributes", "Name:=", "Element_" & n, "Flags:=", "", "Color:=", _
+"(255 128 0)", "Transparency:=", 0, "PartCoordinateSystem:=", _
+    "Global", "MaterialValue:=", "" & Chr(34) & cond_material_name & Chr(34) & "", "SolveInside:=", _
+    false)
+
+ElseIf n < int(num_elements/2+1) Then
+    msgbox ("Here")
+    'Create first half of filter
+    If n Mod 2 = 1 Then
+        'Create odd filter element
+        oEditor.CreatePolyline Array("NAME:PolylineParameters", "IsPolylineCovered:=", true, 
+        "IsPolylineClosed:=", _
+        true, Array("NAME:PolylinePoints", Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc, "Z:=", _
+        "0mil"), Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc&"+Lres"&(n-1), "Z:=", "0mil"), _
+        Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide", "Y:=", y_loc&"+Lres"&(n-1)&"+ChamferSide", "Z:=", "0mil"), _
+        Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1), "Y:=", _
+        y_loc&"+Lres"&(n-1)&"+ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide*2+L"&(n+1), "Y:=", y_loc&"+Lres"&(n-1), "Z:=", _
+        "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L"&(n+1), "Y:=", _
+        y_loc&"+Lres"&(n-1)&"-Lres"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide+L"&(n+1), "Y:=", y_loc&"+Lres"&(n-1)&"-Lres"&n&"-ChamferSide", _
+        "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2+(1.272792*(Wcoupled"&n&"+W1)/2)", "Y:=", _
+        y_loc&"+Lres"&(n-1)&"-Lres"&n&"-ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", 
+    "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2", "Y:=", y_loc&"+Lres"&(n-1)&"-Lres"&n&"-
+    ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2", 
+    "Y:=", y_loc&"+Lres"&(n-1)&"-Lres"&n&"-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)+Lcoupled"&n, "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2+Wcoupled"&n, "Y:=", y_loc&"+Lres"&(n-
+    1)&"-Lres"&n&"-ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2+Wcoupled"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", 
+    x_loc&"+ChamferSide*2+L"&(n+1)&"-W1", "Y:=", y_loc&"+Lres"&(n-1)&"-Lres"&n&"-ChamferSide+W1", "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", _
+    y_loc&"+Lres"&(n-1)&"-ChamferSide-W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L"&(n+1)&"-W1", "Y:=", _
+    "Z:=", _
+    x_loc&"+W1", "Y:=", y_loc&"+Lres"&(n-1)&"+ChamferSide-W1", "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", x_loc&"+W1", "Y:=", _
+    y_loc&"-ChamferSide+W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"-ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2-Wcoupled"&n, "Y:=", y_loc&"-ChamferSide+W1", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2-
+    Wcoupled"&n, "y:=", y_loc&"-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)+Lcoupled"&n&"+DeltaL"&n, "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", _
+x_loc&"+ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2", "Y:=", y_loc&"-
+    ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)+Lcoupled"&n&"+DeltaL"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2", "Y:=", _
+    y_loc&"-ChamferSide+(1.272792*(Wcoupled"&n&"+W1)/2)", "Z:=", "0mil"), _
+    Array("NAME:PLPoint", "X:=", x_loc&"-ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2-(1.272792*(Wcoupled"&n&"+W1)/2)", "Y:=", y_loc&"-
+    ChamferSide", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide", "Y:=", y_loc&"-ChamferSide", _
+    "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc, "Y:=", y_loc, "Z:=", "0mil")), Array("NAME:PolylineSegments", _
+    Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 0, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 1, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 2, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 3, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 4, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 5, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 6, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 7, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 8, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 9, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 10, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 11, "NoOfPoints:=", 2), _
+    "Line", "StartIndex:=", 12, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 13, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 14, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 15, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 16, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 17, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 18, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 19, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 20, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 21, "NoOfPoints:=", 2)), Array("NAME:PolylineXSection", "XSectionType:=", _
+    "None", "XSectionOrient:=", "Auto", "XSectionWidth:=", "0mm", "XSectionTopWidth:=", _
+    "0mm", "XSectionHeight:=", "0mm", "XSectionNumSegments:=", "0", "XSectionBendType:=", _
+    "Corner")), Array("NAME:Attributes", "Name:=", "L01_" & n, "Flags:=", "", "Color:=", _
+    "(132 132 193)", "Transparency:=", 0, "PartCoordinateSystem:=", "Global", "UDMId:=", _
+    "", "MaterialValue:=", "" & Chr(34) & "gold" & Chr(34) & "", "SolveInside:=", _
+    false)
+    Bottom_Box_String = "min("&Bottom_Box_string&", "&y_loc&")"
+
+Top_Box_string = "max(" &Top_Box_string&","&y_loc&"+Lres"&(n-1)&"+ChamferSide"&")"
+    Else
+        'Create even filter element
+        oEditor.CreatePolyline Array("NAME:PolylineParameters", "IsPolylineCovered:=", true, 
+        "IsPolylineClosed:=", _
+        true, Array("NAME:PolylinePoints", Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc, "Z:=", _
+        "0mil"), Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc&"-Lres"&(n-1), "Z:=", "0mil"), _
+        Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide", "Y:=", y_loc&"-Lres"&(n-1)&"-ChamferSide", "Z:=", "0mil"), _
+        Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1), "Y:=", _
+        y_loc&"-Lres"&(n-1)&"-ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide*2+L"&(n+1), "Y:=", y_loc&"-Lres"&(n-1), "Z:=", _
+        "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L"&(n+1), "Y:=", y_loc&"-
+        Lres"&(n-1)&"+Lres"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide+L"&(n+1), "Y:=", y_loc&"-Lres"&(n-1)&"+Lres"&n&"+ChamferSide", _
+        "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2+(1.272792*(Wcoupled"&n&"+W1)/2)", 
+        "Y:=", _
+        y_loc&"-Lres"&(n-1)&"+Lres"&n&"+ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", _
+        "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2", "Y:=", y_loc&"-Lres"&(n-1)&"+Lres"&n&"+ChamferSide-
+        (1.272792*(Wcoupled"&n&"+W1)/2)", "Z:=", _
+        "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2", 
+        "Y:=", y_loc&"-Lres"&(n-1)&"+Lres"&n&"+ChamferSide-(1.272792*(Wcoupled"&n&"-W1)/2)-Lcoupled"&n, "Z:=", "0mil"), 
+        Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide+L"&(n+1)&"/2+Gap"&n&"/2+Wcoupled"&n, "Y:=", y_loc&"-Lres"&(n-
+        1)&"+Lres"&n&"+ChamferSide-(1.272792*(Wcoupled"&n&"+W1)/2)-Lcoupled"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+        x_loc&"+ChamferSide*2+L"&(n+1)&"-W1", "Y:=", y_loc&"-Lres"&(n-1)&"+Lres"&n&"+ChamferSide-W1", 
+        "Z:=", _
+        "0mil"), Array("NAME:PLPoint", "X:=", _
+        y_loc&"-Lres"&(n-1)&"-ChamferSide+W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L"&(n+1)&"-W1", "Y:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+W1", "Y:=", y_loc&"-Lres"&(n-1)&"-ChamferSide+W1", "Z:=", "0mil"), _
+    Array("NAME:PLPoint", "X:=", x_loc&"+W1", "Y:=", _
+    y_loc&"+ChamferSide-W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"-ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2-Wcoupled"&n, "Y:=", y_loc&"-ChamferSide-W1", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2-
+    Wcoupled"&n, "y:=", y_loc&"+ChamferSide-(1.272792*(Wcoupled"&n&"-W1)/2)-Lcoupled"&n&"-DeltaL"&n, "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2", "Y:=", y_loc&"+ChamferSide-
+    (1.272792*(Wcoupled"&n&"+W1)/2)-Lcoupled"&n&"-DeltaL"&n, "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"-ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2", "Y:=", _
+    y_loc&"+ChamferSide-(1.272792*(Wcoupled"&n&"+W1)/2)", "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", x_loc&"-ChamferSide+L"&(n+1)&"/2-Gap"&n&"/2-(1.272792*(Wcoupled"&n&"+W1)/2)", "Y:=", _
+    y_loc&"+ChamferSide", "Z:=", _
+    "Z:=", "0mil"), Array("NAME:PLPoint", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"-ChamferSide", "Y:=", y_loc&"+ChamferSide", _
+    "X:=", _
+    x_loc, "Y:=", y_loc, "Z:=", "0mil")), Array("NAME:PolylineSegments", 
+    Array("NAME:PLSegment", "SegmentType:=", _
+"Line", "StartIndex:=", 0, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 1, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 2, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 3, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 4, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 5, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 6, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 7, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 8, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 9, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 10, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 11, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 12, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 13, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 14, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 15, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 16, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 17, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 18, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 19, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 20, "NoOfPoints:=", 2), Array("NAME:PLSegment", "SegmentType:=", _
+    "Line", "StartIndex:=", 21, "NoOfPoints:=", 2)), Array("NAME:PolylineXSection", _
+    
+"XSectionType:=", _
+    "None", "XSectionOrient:=", "Auto", "XSectionWidth:=", "0mm", "XSectionTopWidth:=", _
+    "0mm", "XSectionHeight:=", "0mm", "XSectionNumSegments:=", "0", "XSectionBendType:=", _
+    "Corner")), Array("NAME:Attributes", "Name:=", "L01_" & n, "Flags:=", "", "Color:=", _
+    "(132 132 193)", "Transparency:=", 0, "PartCoordinateSystem:=", "Global", "UDMId:=", _
+    "", "MaterialValue:=", "" & Chr(34) & "gold" & Chr(34) & "", "SolveInside:=", _
+    false)
+
+        Bottom_Box_string = "min(" &Bottom_Box_string&","&y_loc&"-Lres"&(n-1)&"-
+ChamferSide"&")"
+        Top_Box_string = "max(" &Top_Box_string&","&cy_loc&")"
+
+    End If
+
+'Setup locations for next via
+via_prev2_x_location=via_prev_x_location
+
+via_prev2_x_location_string=via_prev_x_location_string
+
+via_prev_x_location=new_via_location
+via_prev_x_location_string=x_loc & "+w" & n & "/2"
+
+'Create last filter element
+ElseIf n=int(num_elements+1) Then
+    msgbox ("Here2")
+    
+    oEditor.CreatePolyline Array("NAME:PolylineParameters", "IsPolylineCovered:=", true, "IsPolylineClosed:=", _
+    true, Array("NAME:PolylinePoints", Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc, "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc, "Y:=", y_loc&"+Lres1", "Z:=", "0mil"), _
+    Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide", "Y:=", y_loc&"+Lres1+ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", _
+    "X:=", x_loc&"+ChamferSide+L2", "Y:=", _
+    y_loc&"+Lres1+ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide*2+L2", "Y:=", y_loc&"+Lres1", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L2", "Y:=", y_loc&"+Lres1-L1b-Wio-L1a", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2", "Y:=", y_loc&"+Lres1-L1b-Wio-L1a-ChamferSide", "Z:=", "0mil"), 
+    Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2+Gap1/2+(1.272792*(Wcoupled1+W1)/2)", "Y:=", _
+    y_loc&"+Lres1-L1b-Wio-L1a-ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2+Gap1/2", "Y:=", y_loc&"+Lres1-L1b-Wio-L1a-ChamferSide+(1.272792*(Wcoupled1+W1)/2)", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2+Gap1/2", "Y:=", y_loc&"+Lres1-L1b-
+    Wio-L1a-ChamferSide+(1.272792*(Wcoupled1+W1)/2)+L1c", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2+Gap1/2+Wcoupled1", "Y:=", y_loc&"+Lres1-L1b-Wio-L1a-
+    ChamferSide+(1.272792*(Wcoupled1+W1)/2)+L1c", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2+Gap1/2+Wcoupled1", "Y:=", _
+    y_loc&"+Lres1-L1b-Wio-L1a-ChamferSide+W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide*2+L2-W1", "Y:=", y_loc&"+Lres1-L1b-Wio-L1a-ChamferSide+W1", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide*2+L2-W1", "Y:=", _
+    y_loc&"+Lres1+ChamferSide-W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+W1", "Y:=", y_loc&"+Lres1+ChamferSide-W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+W1", "Y:=", _
+    y_loc&"-ChamferSide+W1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2-
+    Gap1/2-Wcoupled1", "Y:=", y_loc&"-ChamferSide+W1", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2-Gap1/2-Wcoupled1", "Y:=", y_loc&"-
+    ChamferSide+(1.272792*(Wcoupled1+W1)/2)+Lcoupled1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2-Gap1/2", "Y:=", y_loc&"-
+    ChamferSide+(1.272792*(Wcoupled1+W1)/2)+Lcoupled1", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide+L2/2-
+    Gap1/2", "Y:=", _
+    y_loc&"-ChamferSide+(1.272792*(Wcoupled1+W1)/2)", "Z:=", "0mil"), Array("NAME:PLPoint", "X:=", _
+    x_loc&"+ChamferSide+L2/2-Gap1/2-(1.272792*(Wcoupled1+W1)/2)", "Y:=", y_loc&"-ChamferSide", "Z:=", _
+    "0mil"), Array("NAME:PLPoint", "X:=", x_loc&"+ChamferSide", "Y:=", y_loc&"-ChamferSide", "Z:=", "0mil"), Array("NAME:PLPoint","X:=", _
+
+
+
+ON IMAGE 29 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
