@@ -1,0 +1,2 @@
+MsgBox "Total points: " & UBound(polyPoints) + 1
+MsgBox "Total segments: " & UBound(segments) + 1
