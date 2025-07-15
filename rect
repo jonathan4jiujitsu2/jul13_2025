@@ -1,0 +1,56 @@
+' === HFSS Initialization ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "RectBasedMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+' === Common height (Z) for all rectangles
+Dim z_val: z_val = "12.25mm"
+
+' === Rectangle 1
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+    "XStart:=", "-193.6343184mm", _
+    "YStart:=", "-98.11330402mm", _
+    "ZStart:=", z_val, _
+    "Width:=", "3.9372118mm", _
+    "Height:=", "108.96282849mm", _
+    "WhichAxis:=", "Z"), _
+    Array("NAME:Attributes", "Name:=", "Rect1", "MaterialName:=", "copper", "SolveInside:=", False)
+
+' === Rectangle 2
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+    "XStart:=", "-269.7169686mm", _
+    "YStart:=", "10.8495245mm", _
+    "ZStart:=", z_val, _
+    "Width:=", "80.0196586mm", _
+    "Height:=", "30.960586mm", _
+    "WhichAxis:=", "Z"), _
+    Array("NAME:Attributes", "Name:=", "Rect2", "MaterialName:=", "copper", "SolveInside:=", False)
+
+' === Rectangle 3
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+    "XStart:=", "-269.71697mm", _
+    "YStart:=", "-124.5374996mm", _
+    "ZStart:=", z_val, _
+    "Width:=", "30.96456mm", _
+    "Height:=", "132.729517753mm", _
+    "WhichAxis:=", "Z"), _
+    Array("NAME:Attributes", "Name:=", "Rect3", "MaterialName:=", "copper", "SolveInside:=", False)
+
+' === Rectangle 4
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+    "XStart:=", "-321.26819mm", _
+    "YStart:=", "-124.5375mm", _
+    "ZStart:=", z_val, _
+    "Width:=", "51.55122mm", _
+    "Height:=", "7mm", _
+    "WhichAxis:=", "Z"), _
+    Array("NAME:Attributes", "Name:=", "Rect4", "MaterialName:=", "copper", "SolveInside:=", False)
+
+' === Unite all rectangles into a single body
+oEditor.Unite Array("Rect1", "Rect2", "Rect3", "Rect4")
+
+MsgBox "✅ All rectangles created and united successfully."
