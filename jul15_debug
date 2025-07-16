@@ -1,0 +1,81 @@
+' === HFSS Initialization ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "AwkwardMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS Project Initialized"
+
+' === Define Z-plane level and thickness for sweep
+Dim z_plane: z_plane = "0mm"
+Dim z_thickness: z_thickness = "0.035mm" ' Copper trace thickness
+
+' === Define 17 polyline points
+Dim polyPoints(16)
+polyPoints(0) = Array("NAME:PLPoint", "X:=", "-321.2681912mm", "Y:=", "-117.5374996mm", "Z:=", z_plane)
+polyPoints(1) = Array("NAME:PLPoint", "X:=", "-321.2681912mm", "Y:=", "-124.5374996mm", "Z:=", z_plane)
+polyPoints(2) = Array("NAME:PLPoint", "X:=", "-269.3222142mm", "Y:=", "-124.5374996mm", "Z:=", z_plane)
+polyPoints(3) = Array("NAME:PLPoint", "X:=", "-250.7346861mm", "Y:=", "-109.9499715mm", "Z:=", z_plane)
+polyPoints(4) = Array("NAME:PLPoint", "X:=", "-250.7346861mm", "Y:=", "0.318002405mm", "Z:=", z_plane)
+polyPoints(5) = Array("NAME:PLPoint", "X:=", "-238.7524027mm", "Y:=", "8.192018153mm", "Z:=", z_plane)
+polyPoints(6) = Array("NAME:PLPoint", "X:=", "-238.7524027mm", "Y:=", "10.84952449mm", "Z:=", z_plane)
+polyPoints(7) = Array("NAME:PLPoint", "X:=", "-193.6343184mm", "Y:=", "10.84952449mm", "Z:=", z_plane)
+polyPoints(8) = Array("NAME:PLPoint", "X:=", "-193.6343184mm", "Y:=", "-98.11330402mm", "Z:=", z_plane)
+polyPoints(9) = Array("NAME:PLPoint", "X:=", "-189.6973106mm", "Y:=", "-98.11330402mm", "Z:=", z_plane)
+polyPoints(10)= Array("NAME:PLPoint", "X:=", "-189.6973106mm", "Y:=", "41.81409142mm", "Z:=", z_plane)
+polyPoints(11)= Array("NAME:PLPoint", "X:=", "-244.945316mm", "Y:=", "41.81409142mm", "Z:=", z_plane)
+polyPoints(12)= Array("NAME:PLPoint", "X:=", "-269.7169696mm", "Y:=", "17.04243788mm", "Z:=", z_plane)
+polyPoints(13)= Array("NAME:PLPoint", "X:=", "-269.7169696mm", "Y:=", "8.192018153mm", "Z:=", z_plane)
+polyPoints(14)= Array("NAME:PLPoint", "X:=", "-257.7346861mm", "Y:=", "0.318002406mm", "Z:=", z_plane)
+polyPoints(15)= Array("NAME:PLPoint", "X:=", "-257.7346861mm", "Y:=", "-103.0504766mm", "Z:=", z_plane)
+polyPoints(16)= Array("NAME:PLPoint", "X:=", "-272.2217091mm", "Y:=", "-117.5374996mm", "Z:=", z_plane)
+
+MsgBox "Polyline points defined"
+
+' === Define 16 segments (for 17 points)
+Dim segments(15)
+Dim i
+For i = 0 To 15
+  segments(i) = Array("NAME:PLSegment", "SegmentType:=", "Line", "StartIndex:=", i, "NoOfPoints:=", 2)
+Next
+
+MsgBox "Polyline segments defined"
+
+' === Create the polyline outline
+oEditor.CreatePolyline Array( _
+  "NAME:PolylineParameters", _
+  "IsPolylineCovered:=", True, _
+  "IsPolylineClosed:=", True, _
+  Array("NAME:PolylinePoints", polyPoints), _
+  Array("NAME:PolylineSegments", segments), _
+  Array("NAME:PolylineXSection", _
+    "XSectionType:=", "None", _
+    "XSectionOrient:=", "Auto", _
+    "XSectionWidth:=", "0mm", _
+    "XSectionTopWidth:=", "0mm", _
+    "XSectionHeight:=", "0mm", _
+    "XSectionNumSegments:=", "0", _
+    "XSectionBendType:=", "Corner") _
+), Array("NAME:Attributes", "Name:=", "TraceOutline", "MaterialName:=", "", "SolveInside:=", False)
+
+MsgBox "Polyline created — now sweeping"
+
+' === Sweep the polyline into a 3D copper trace
+oEditor.SweepAlongVector Array( _
+  "NAME:Selections", "Selections:=", "TraceOutline"), _
+  Array("NAME:VectorSweepParameters", _
+    "DraftAngle:=", "0deg", "DraftType:=", "Round", _
+    "CheckFaceFaceIntersection:=", False, _
+    "SweepVectorX:=", "0mm", "SweepVectorY:=", "0mm", "SweepVectorZ:=", z_thickness)
+
+MsgBox "Sweep complete — now assigning material"
+
+' === Assign material to the swept body
+oEditor.ChangeProperty Array("NAME:AllTabs", Array("NAME:Geometry3DAttributeTab", _
+  Array("NAME:PropServers", "TraceOutline"), _
+  Array("NAME:ChangedProps", Array("NAME:Material", "Value:=", "lossy_copper"))))
+
+MsgBox "✅ Microstrip trace created and assigned to lossy_copper!"
