@@ -1,0 +1,68 @@
+' === HFSS Initialization ===
+Dim oAnsoftApp, oDesktop, oProject, oDesign, oEditor
+Set oAnsoftApp = CreateObject("AnsoftHfss.HfssScriptInterface")
+Set oDesktop = oAnsoftApp.GetAppDesktop()
+oDesktop.RestoreWindow
+Set oProject = oDesktop.NewProject
+Set oDesign = oProject.InsertDesign("HFSS", "SweptRectsMicrostrip", "DrivenModal", "")
+Set oEditor = oDesign.SetActiveEditor("3D Modeler")
+
+MsgBox "HFSS ready."
+
+' === Sweep thickness
+Dim z_thickness: z_thickness = "0.035mm"
+
+' === Create 2D Rectangles as Polyline Faces ===
+
+' Rectangle 1
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+  "XStart:=", "-193.6343184mm", "YStart:=", "-98.11330402mm", "ZStart:=", "0mm", _
+  "Width:=", "3.9372118mm", "Height:=", "108.96282849mm", "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Face1", "MaterialName:=", "", "SolveInside:=", False)
+
+' Rectangle 2
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+  "XStart:=", "-269.7169686mm", "YStart:=", "10.8495245mm", "ZStart:=", "0mm", _
+  "Width:=", "80.0196586mm", "Height:=", "30.960586mm", "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Face2", "MaterialName:=", "", "SolveInside:=", False)
+
+' Rectangle 3
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+  "XStart:=", "-269.71697mm", "YStart:=", "-124.5374996mm", "ZStart:=", "0mm", _
+  "Width:=", "30.96456mm", "Height:=", "132.729517753mm", "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Face3", "MaterialName:=", "", "SolveInside:=", False)
+
+' Rectangle 4
+oEditor.CreateRectangle Array("NAME:RectangleParameters", _
+  "XStart:=", "-321.26819mm", "YStart:=", "-124.5375mm", "ZStart:=", "0mm", _
+  "Width:=", "51.55122mm", "Height:=", "7mm", "WhichAxis:=", "Z"), _
+  Array("NAME:Attributes", "Name:=", "Face4", "MaterialName:=", "", "SolveInside:=", False)
+
+MsgBox "Rectangular faces created."
+
+' === Sweep each rectangle face into copper volumes ===
+Dim faceNames
+faceNames = Array("Face1", "Face2", "Face3", "Face4")
+
+Dim i
+For i = 0 To UBound(faceNames)
+  oEditor.SweepAlongVector Array( _
+    "NAME:Selections", "Selections:=", faceNames(i)), _
+    Array("NAME:VectorSweepParameters", _
+      "DraftAngle:=", "0deg", "DraftType:=", "Round", "CheckFaceFaceIntersection:=", False, _
+      "SweepVectorX:=", "0mm", "SweepVectorY:=", "0mm", "SweepVectorZ:=", z_thickness)
+Next
+
+MsgBox "Sweep complete."
+
+' === Unite all the swept solids
+oEditor.Unite Array("Face1", "Face2", "Face3", "Face4")
+
+MsgBox "Unite complete."
+
+' === Assign copper material
+oEditor.ChangeProperty Array("NAME:AllTabs", Array("NAME:Geometry3DAttributeTab", _
+  Array("NAME:PropServers", "Face1"), _
+  Array("NAME:ChangedProps", Array("NAME:Material", "Value:=", "lossy_copper"))))
+
+MsgBox "✅ Microstrip created using rectangles + sweep. Material assigned."
